@@ -1,18 +1,59 @@
-# Mind Garden
+# MindGarden 🌱
 
-An Android application built with Kotlin and Jetpack Compose, featuring Material Design 3 with dynamic color support.
+An AI-powered educational support and course guidance mobile application designed to help students succeed academically and emotionally.
+
+[![Android](https://img.shields.io/badge/Platform-Android-green.svg)](https://www.android.com/)
+[![Kotlin](https://img.shields.io/badge/Language-Kotlin-purple.svg)](https://kotlinlang.org/)
+[![Jetpack Compose](https://img.shields.io/badge/UI-Jetpack%20Compose-blue.svg)](https://developer.android.com/jetpack/compose)
+[![Material Design 3](https://img.shields.io/badge/Design-Material%203-orange.svg)](https://m3.material.io/)
 
 ## Overview
 
-Mind Garden is a modern Android app that leverages the latest Android development technologies including Jetpack Compose for declarative UI and Material 3 for contemporary design patterns.
+MindGarden is a comprehensive mobile application that serves as a student's academic companion, providing:
+
+- 🤖 **AI-Powered Chat Assistant** - 24/7 intelligent support using Google Gemini
+- 📚 **Course Information Hub** - Browse, search, and discover courses
+- 💚 **Emotional Support System** - Mental health resources and motivational content
+- 📊 **Progress Tracking** - Monitor study sessions and achieve goals
+- 📖 **Educational Resources** - Study guides, past papers, and tutorials
+- ✨ **Study Tips & Techniques** - Evidence-based learning strategies
 
 ## Features
 
-- **Jetpack Compose UI**: Fully declarative UI built with Compose
-- **Material Design 3**: Modern design system with dynamic color support
-- **Dark/Light Theme**: Automatic theme switching based on system preferences
-- **Dynamic Colors**: Adapts to system theme on Android 12+ devices
-- **Edge-to-Edge Display**: Immersive full-screen experience
+### ✅ Implemented
+
+#### 1. AI Chat Assistant
+- Natural language understanding for educational queries
+- Deep Research mode for comprehensive answers
+- Extended Thinking mode for detailed reasoning
+- Empathetic responses for emotional support
+- Chat history persistence
+
+#### 2. Course Search & Information
+- Advanced search with filters (department, level)
+- Detailed course information with difficulty ratings
+- Prerequisites tracking
+- Course-specific study tips
+
+#### 3. Emotional Support System
+- **Dealing with Failure** - Strategies for academic setbacks
+- **Stress Management** - Breathing techniques, exercise, sleep hygiene
+- **Building Confidence** - Growth mindset, celebrating wins
+- **Motivation Boosters** - Purpose connection, accountability
+- **Crisis Support** - Emergency contacts and resources
+
+#### 4. Progress Tracking
+- Study hours statistics and weekly patterns
+- Goal setting and completion tracking
+- Study session history
+- Achievement system
+
+#### 5. Modern Android Architecture
+- **MVVM Pattern** - Clean separation of concerns
+- **Hilt Dependency Injection** - Modular, testable code
+- **Room Database** - Offline-first data persistence
+- **Jetpack Compose** - Modern declarative UI
+- **Material Design 3** - Beautiful, accessible interface
 
 ## Requirements
 

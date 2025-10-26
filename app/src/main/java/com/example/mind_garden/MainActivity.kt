@@ -31,15 +31,61 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.mind_garden.ui.theme.MindgardenTheme
+import dagger.hilt.android.AndroidEntryPoint
 
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
             MindgardenTheme {
-                MindGardenDashboard()
+                MindGardenApp()
             }
+        }
+    }
+}
+
+@Composable
+fun MindGardenApp() {
+    // Track authentication state
+    // For now, using simple state management
+    // TODO: Replace with proper auth state from ViewModel/DataStore
+    var isFirstTime by remember { mutableStateOf(true) }
+    var isAuthenticated by remember { mutableStateOf(false) }
+    var showLogin by remember { mutableStateOf(false) }
+
+    when {
+        isFirstTime -> {
+            com.example.mind_garden.presentation.auth.OnboardingScreen(
+                onComplete = {
+                    isFirstTime = false
+                    showLogin = false // Show sign up after onboarding
+                }
+            )
+        }
+        !isAuthenticated && !showLogin -> {
+            com.example.mind_garden.presentation.auth.SignUpScreen(
+                onSignUpSuccess = {
+                    isAuthenticated = true
+                },
+                onNavigateToLogin = {
+                    showLogin = true
+                }
+            )
+        }
+        !isAuthenticated && showLogin -> {
+            com.example.mind_garden.presentation.auth.LoginScreen(
+                onLoginSuccess = {
+                    isAuthenticated = true
+                },
+                onNavigateToSignUp = {
+                    showLogin = false
+                }
+            )
+        }
+        else -> {
+            MindGardenDashboard()
         }
     }
 }
@@ -93,11 +139,20 @@ fun MindGardenDashboard() {
                         }
                     )
                     NavigationBarItem(
-                        icon = { Icon(Icons.Default.Star, contentDescription = "Resources") },
-                        label = { Text("Resources") },
-                        selected = currentScreen == "resources",
+                        icon = { Icon(Icons.Default.FavoriteBorder, contentDescription = "Support") },
+                        label = { Text("Support") },
+                        selected = currentScreen == "support",
                         onClick = {
-                            currentScreen = "resources"
+                            currentScreen = "support"
+                            selectedCourse = null
+                        }
+                    )
+                    NavigationBarItem(
+                        icon = { Icon(Icons.Default.DateRange, contentDescription = "Progress") },
+                        label = { Text("Progress") },
+                        selected = currentScreen == "progress",
+                        onClick = {
+                            currentScreen = "progress"
                             selectedCourse = null
                         }
                     )
@@ -198,6 +253,12 @@ fun MindGardenDashboard() {
                 }
                 "resources" -> {
                     ResourcesScreen()
+                }
+                "support" -> {
+                    com.example.mind_garden.presentation.support.EmotionalSupportScreen()
+                }
+                "progress" -> {
+                    com.example.mind_garden.presentation.progress.ProgressTrackingScreen()
                 }
             }
 
