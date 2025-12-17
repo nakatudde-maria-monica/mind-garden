@@ -32,28 +32,43 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.example.mind_garden.ui.theme.MindgardenTheme
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.launch
+import com.example.mind_garden.data.firebase.FirebaseAuthService
+import javax.inject.Inject
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
+
+    @Inject
+    lateinit var authService: FirebaseAuthService
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
             MindgardenTheme {
-                MindGardenApp()
+                MindGardenApp(authService = authService)
             }
         }
     }
 }
 
 @Composable
-fun MindGardenApp() {
+fun MindGardenApp(authService: FirebaseAuthService) {
     // Track authentication state
     // For now, using simple state management
     // TODO: Replace with proper auth state from ViewModel/DataStore
     var isFirstTime by remember { mutableStateOf(true) }
     var isAuthenticated by remember { mutableStateOf(false) }
     var showLogin by remember { mutableStateOf(false) }
+
+    // Logout handler
+    val onLogout = {
+        authService.signOut()
+        isAuthenticated = false
+        showLogin = false
+        isFirstTime = false // Go back to sign up screen after logout
+    }
 
     when {
         isFirstTime -> {
@@ -85,23 +100,80 @@ fun MindGardenApp() {
             )
         }
         else -> {
-            MindGardenDashboard()
+            MindGardenDashboard(onLogout = onLogout)
         }
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun MindGardenDashboard() {
+fun MindGardenDashboard(onLogout: () -> Unit) {
     var showAIChat by remember { mutableStateOf(false) }
     var deepResearch by remember { mutableStateOf(false) }
     var extendedThinking by remember { mutableStateOf(false) }
     var queryText by remember { mutableStateOf("") }
     var currentScreen by remember { mutableStateOf("home") }
     var selectedCourse by remember { mutableStateOf<Course?>(null) }
+    val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
+    val scope = rememberCoroutineScope()
 
-    Scaffold(
+    ModalNavigationDrawer(
+        drawerState = drawerState,
+        drawerContent = {
+            DrawerContent(
+                currentScreen = currentScreen,
+                onNavigate = { screen ->
+                    currentScreen = screen
+                    selectedCourse = null
+                    scope.launch { drawerState.close() }
+                },
+                onLogout = {
+                    scope.launch { drawerState.close() }
+                    onLogout()
+                }
+            )
+        }
+    ) {
+        Scaffold(
         modifier = Modifier.fillMaxSize(),
+        topBar = {
+            if (!showAIChat) {
+                TopAppBar(
+                    title = {
+                        Text(
+                            text = when (currentScreen) {
+                                "home" -> "Mind Garden"
+                                "courses" -> "Courses"
+                                "support" -> "Support"
+                                "progress" -> "Progress"
+                                "profile" -> "Profile"
+                                "settings" -> "Settings"
+                                "help" -> "Help & Support"
+                                else -> "Mind Garden"
+                            },
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    },
+                    navigationIcon = {
+                        IconButton(onClick = {
+                            scope.launch {
+                                drawerState.open()
+                            }
+                        }) {
+                            Icon(
+                                imageVector = Icons.Default.Menu,
+                                contentDescription = "Menu"
+                            )
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        titleContentColor = Color.White,
+                        navigationIconContentColor = Color.White
+                    )
+                )
+            }
+        },
         floatingActionButton = {
             if (!showAIChat && currentScreen == "home") {
                 FloatingActionButton(
@@ -260,6 +332,15 @@ fun MindGardenDashboard() {
                 "progress" -> {
                     com.example.mind_garden.presentation.progress.ProgressTrackingScreen()
                 }
+                "profile" -> {
+                    ProfileScreen()
+                }
+                "settings" -> {
+                    SettingsScreen()
+                }
+                "help" -> {
+                    HelpAndSupportScreen()
+                }
             }
 
             // AI Chat Overlay
@@ -294,6 +375,165 @@ fun MindGardenDashboard() {
                     }
                 )
             }
+        }
+    }
+    }
+}
+
+@Composable
+fun DrawerContent(
+    currentScreen: String,
+    onNavigate: (String) -> Unit,
+    onLogout: () -> Unit
+) {
+    ModalDrawerSheet(
+        modifier = Modifier.width(300.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(16.dp)
+        ) {
+            // Drawer Header
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(150.dp)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(
+                        Brush.horizontalGradient(
+                            colors = listOf(
+                                Color(0xFF6B4CE6),
+                                Color(0xFF4E9BF5)
+                            )
+                        )
+                    )
+                    .padding(16.dp),
+                contentAlignment = Alignment.BottomStart
+            ) {
+                Column {
+                    Icon(
+                        imageVector = Icons.Default.AccountCircle,
+                        contentDescription = null,
+                        tint = Color.White,
+                        modifier = Modifier.size(60.dp)
+                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = "Student User",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.White
+                    )
+                    Text(
+                        text = "student@mindgarden.com",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(alpha = 0.9f)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Menu Items
+            DrawerMenuItem(
+                icon = Icons.Default.Person,
+                label = "Profile",
+                isSelected = currentScreen == "profile",
+                onClick = { onNavigate("profile") }
+            )
+
+            DrawerMenuItem(
+                icon = Icons.Default.Settings,
+                label = "Settings",
+                isSelected = currentScreen == "settings",
+                onClick = { onNavigate("settings") }
+            )
+
+            DrawerMenuItem(
+                icon = Icons.Default.Info,
+                label = "Help & Support",
+                isSelected = currentScreen == "help",
+                onClick = { onNavigate("help") }
+            )
+
+            Spacer(modifier = Modifier.weight(1f))
+
+            // Logout Button
+            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+
+            Button(
+                onClick = onLogout,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(50.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.errorContainer,
+                    contentColor = MaterialTheme.colorScheme.onErrorContainer
+                )
+            ) {
+                Icon(
+                    imageVector = Icons.Default.ExitToApp,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Logout",
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun DrawerMenuItem(
+    icon: ImageVector,
+    label: String,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(onClick = onClick),
+        color = if (isSelected) {
+            MaterialTheme.colorScheme.primaryContainer
+        } else {
+            Color.Transparent
+        }
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 16.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = if (isSelected) {
+                    MaterialTheme.colorScheme.onPrimaryContainer
+                } else {
+                    MaterialTheme.colorScheme.onSurface
+                },
+                modifier = Modifier.size(24.dp)
+            )
+            Spacer(modifier = Modifier.width(16.dp))
+            Text(
+                text = label,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = if (isSelected) FontWeight.SemiBold else FontWeight.Normal,
+                color = if (isSelected) {
+                    MaterialTheme.colorScheme.onPrimaryContainer
+                } else {
+                    MaterialTheme.colorScheme.onSurface
+                }
+            )
         }
     }
 }
@@ -345,6 +585,39 @@ fun AIChatPanel(
     onClose: () -> Unit,
     onSubmit: () -> Unit
 ) {
+    // Mock chat history
+    val mockChatHistory = remember {
+        listOf(
+            ChatHistoryItem(
+                "How do I prepare for my Data Structures exam?",
+                "1 hour ago",
+                Icons.Default.List
+            ),
+            ChatHistoryItem(
+                "What are the best study techniques for Calculus?",
+                "2 days ago",
+                Icons.Default.Star
+            ),
+            ChatHistoryItem(
+                "I'm feeling overwhelmed with my course load. Any tips?",
+                "3 days ago",
+                Icons.Default.FavoriteBorder
+            ),
+            ChatHistoryItem(
+                "What programming language should I focus on?",
+                "1 week ago",
+                Icons.Default.Info
+            ),
+            ChatHistoryItem(
+                "How can I improve my time management?",
+                "1 week ago",
+                Icons.Default.DateRange
+            )
+        )
+    }
+
+    var showHistory by remember { mutableStateOf(true) }
+
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = MaterialTheme.colorScheme.background
@@ -365,15 +638,58 @@ fun AIChatPanel(
                     style = MaterialTheme.typography.headlineSmall,
                     fontWeight = FontWeight.Bold
                 )
-                IconButton(onClick = onClose) {
-                    Icon(
-                        imageVector = Icons.Default.Close,
-                        contentDescription = "Close"
-                    )
+                Row {
+                    IconButton(onClick = { showHistory = !showHistory }) {
+                        Icon(
+                            imageVector = if (showHistory) Icons.Default.KeyboardArrowUp else Icons.Default.List,
+                            contentDescription = "Toggle History"
+                        )
+                    }
+                    IconButton(onClick = onClose) {
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Close"
+                        )
+                    }
                 }
             }
 
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Chat History Section
+            AnimatedVisibility(visible = showHistory) {
+                Column {
+                    Text(
+                        text = "Recent Conversations",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(bottom = 12.dp)
+                    )
+
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(200.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        items(mockChatHistory) { chat ->
+                            ChatHistoryCard(
+                                chat = chat,
+                                onClick = {
+                                    onQueryChange(chat.message)
+                                    showHistory = false
+                                }
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+                    HorizontalDivider()
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
 
             // Toggle Options
             Card(
@@ -879,6 +1195,650 @@ fun ResourceCategoryCard(category: ResourceCategory) {
                 imageVector = Icons.Default.ArrowForward,
                 contentDescription = "Go",
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+fun ProfileScreen() {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+    ) {
+        // Profile Header
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(200.dp)
+                .background(
+                    Brush.horizontalGradient(
+                        colors = listOf(
+                            Color(0xFF6B4CE6),
+                            Color(0xFF4E9BF5)
+                        )
+                    )
+                ),
+            contentAlignment = Alignment.Center
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Icon(
+                    imageVector = Icons.Default.AccountCircle,
+                    contentDescription = null,
+                    tint = Color.White,
+                    modifier = Modifier.size(80.dp)
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                Text(
+                    text = "Student User",
+                    style = MaterialTheme.typography.headlineSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+                Text(
+                    text = "student@mindgarden.com",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.White.copy(alpha = 0.9f)
+                )
+            }
+        }
+
+        // Profile Information
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Text(
+                text = "Personal Information",
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier.padding(bottom = 16.dp)
+            )
+
+            ProfileInfoCard(
+                icon = Icons.Default.Person,
+                label = "Full Name",
+                value = "Student User"
+            )
+
+            ProfileInfoCard(
+                icon = Icons.Default.Email,
+                label = "Email",
+                value = "student@mindgarden.com"
+            )
+
+            ProfileInfoCard(
+                icon = Icons.Default.DateRange,
+                label = "Member Since",
+                value = "January 2024"
+            )
+
+            ProfileInfoCard(
+                icon = Icons.Default.Star,
+                label = "Courses Enrolled",
+                value = "8 Courses"
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Edit Profile Button
+            Button(
+                onClick = { /* TODO: Edit profile */ },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(56.dp),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Edit,
+                    contentDescription = null,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Edit Profile",
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun ProfileInfoCard(icon: ImageVector, label: String, value: String) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 12.dp),
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.primaryContainer,
+                modifier = Modifier.size(48.dp)
+            ) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.size(24.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            Column {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                Text(
+                    text = value,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun SettingsScreen() {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp)
+    ) {
+        Text(
+            text = "Settings",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(bottom = 24.dp)
+        )
+
+        // General Settings Section
+        Text(
+            text = "General",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(bottom = 12.dp)
+        )
+
+        var notificationsEnabled by remember { mutableStateOf(true) }
+        SettingsToggleItem(
+            icon = Icons.Default.Notifications,
+            title = "Notifications",
+            description = "Enable push notifications",
+            checked = notificationsEnabled,
+            onCheckedChange = { notificationsEnabled = it }
+        )
+
+        var darkModeEnabled by remember { mutableStateOf(false) }
+        SettingsToggleItem(
+            icon = Icons.Default.Star,
+            title = "Dark Mode",
+            description = "Enable dark theme",
+            checked = darkModeEnabled,
+            onCheckedChange = { darkModeEnabled = it }
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Account Settings Section
+        Text(
+            text = "Account",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(bottom = 12.dp)
+        )
+
+        SettingsNavigationItem(
+            icon = Icons.Default.Lock,
+            title = "Change Password",
+            onClick = { /* TODO: Navigate to change password */ }
+        )
+
+        SettingsNavigationItem(
+            icon = Icons.Default.Email,
+            title = "Email Preferences",
+            onClick = { /* TODO: Navigate to email preferences */ }
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // App Settings Section
+        Text(
+            text = "App",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(bottom = 12.dp)
+        )
+
+        SettingsNavigationItem(
+            icon = Icons.Default.Info,
+            title = "About",
+            onClick = { /* TODO: Show about dialog */ }
+        )
+
+        SettingsNavigationItem(
+            icon = Icons.Default.Share,
+            title = "Share App",
+            onClick = { /* TODO: Share app */ }
+        )
+
+        SettingsNavigationItem(
+            icon = Icons.Default.Star,
+            title = "Rate Us",
+            onClick = { /* TODO: Open store rating */ }
+        )
+    }
+}
+
+@Composable
+fun SettingsToggleItem(
+    icon: ImageVector,
+    title: String,
+    description: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 12.dp),
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    modifier = Modifier.size(48.dp)
+                ) {
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.width(16.dp))
+
+                Column {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.bodyLarge,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                    Text(
+                        text = description,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+
+            Switch(
+                checked = checked,
+                onCheckedChange = onCheckedChange
+            )
+        }
+    }
+}
+
+@Composable
+fun SettingsNavigationItem(
+    icon: ImageVector,
+    title: String,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 12.dp)
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    modifier = Modifier.size(48.dp)
+                ) {
+                    Box(
+                        contentAlignment = Alignment.Center,
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        Icon(
+                            imageVector = icon,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.size(24.dp)
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.width(16.dp))
+
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold
+                )
+            }
+
+            Icon(
+                imageVector = Icons.Default.ArrowForward,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+@Composable
+fun HelpAndSupportScreen() {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(rememberScrollState())
+            .padding(16.dp)
+    ) {
+        Text(
+            text = "Help & Support",
+            style = MaterialTheme.typography.headlineMedium,
+            fontWeight = FontWeight.Bold,
+            modifier = Modifier.padding(bottom = 24.dp)
+        )
+
+        // FAQ Section
+        Text(
+            text = "Frequently Asked Questions",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(bottom = 12.dp)
+        )
+
+        val faqs = listOf(
+            "How do I search for courses?" to "Go to the Courses tab and use the search bar to find courses by name or code. You can also filter by department and level.",
+            "How do I use the AI assistant?" to "Tap the floating AI button on the home screen. You can ask questions about courses, study tips, and academic guidance.",
+            "How do I track my progress?" to "Navigate to the Progress tab to view your enrolled courses, completed tasks, and study statistics.",
+            "How do I reset my password?" to "Go to Settings > Account > Change Password to update your password."
+        )
+
+        faqs.forEach { (question, answer) ->
+            FAQItem(question = question, answer = answer)
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Contact Support Section
+        Text(
+            text = "Contact Us",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.SemiBold,
+            modifier = Modifier.padding(bottom = 12.dp)
+        )
+
+        ContactSupportItem(
+            icon = Icons.Default.Email,
+            title = "Email Support",
+            description = "support@mindgarden.com",
+            onClick = { /* TODO: Open email client */ }
+        )
+
+        ContactSupportItem(
+            icon = Icons.Default.Call,
+            title = "Phone Support",
+            description = "+1 (555) 123-4567",
+            onClick = { /* TODO: Open dialer */ }
+        )
+
+        ContactSupportItem(
+            icon = Icons.Default.Star,
+            title = "Live Chat",
+            description = "Available 9 AM - 5 PM",
+            onClick = { /* TODO: Open live chat */ }
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Report Issue Button
+        Button(
+            onClick = { /* TODO: Report issue */ },
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
+            shape = RoundedCornerShape(12.dp)
+        ) {
+            Icon(
+                imageVector = Icons.Default.Warning,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp)
+            )
+            Spacer(modifier = Modifier.width(8.dp))
+            Text(
+                text = "Report an Issue",
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.SemiBold
+            )
+        }
+    }
+}
+
+@Composable
+fun FAQItem(question: String, answer: String) {
+    var expanded by remember { mutableStateOf(false) }
+
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 12.dp)
+            .clickable { expanded = !expanded },
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = question,
+                    style = MaterialTheme.typography.bodyLarge,
+                    fontWeight = FontWeight.SemiBold,
+                    modifier = Modifier.weight(1f)
+                )
+                Icon(
+                    imageVector = if (expanded) Icons.Default.KeyboardArrowUp else Icons.Default.KeyboardArrowDown,
+                    contentDescription = if (expanded) "Collapse" else "Expand",
+                    tint = MaterialTheme.colorScheme.primary
+                )
+            }
+
+            AnimatedVisibility(visible = expanded) {
+                Column {
+                    Spacer(modifier = Modifier.height(12.dp))
+                    HorizontalDivider()
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Text(
+                        text = answer,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun ContactSupportItem(
+    icon: ImageVector,
+    title: String,
+    description: String,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 12.dp)
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.primaryContainer,
+                modifier = Modifier.size(56.dp)
+            ) {
+                Box(
+                    contentAlignment = Alignment.Center,
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    Icon(
+                        imageVector = icon,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.size(28.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.width(16.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold
+                )
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
+
+            Icon(
+                imageVector = Icons.Default.ArrowForward,
+                contentDescription = "Go",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+    }
+}
+
+data class ChatHistoryItem(
+    val message: String,
+    val timeAgo: String,
+    val icon: ImageVector
+)
+
+@Composable
+fun ChatHistoryCard(
+    chat: ChatHistoryItem,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick),
+        shape = RoundedCornerShape(12.dp),
+        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = chat.icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.primary,
+                modifier = Modifier.size(24.dp)
+            )
+            Spacer(modifier = Modifier.width(12.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = chat.message,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Medium,
+                    maxLines = 2
+                )
+                Text(
+                    text = chat.timeAgo,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+            }
+            Icon(
+                imageVector = Icons.Default.ArrowForward,
+                contentDescription = "Open",
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(20.dp)
             )
         }
     }

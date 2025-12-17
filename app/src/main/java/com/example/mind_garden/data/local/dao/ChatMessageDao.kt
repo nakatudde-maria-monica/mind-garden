@@ -5,6 +5,7 @@ import com.example.mind_garden.data.local.entity.ChatMessageEntity
 import kotlinx.coroutines.flow.Flow
 
 
+
 @Dao
 interface ChatMessageDao {
     @Query("SELECT * FROM chat_messages WHERE userId = :userId ORDER BY timestamp ASC")

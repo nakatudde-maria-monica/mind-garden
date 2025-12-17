@@ -13,9 +13,10 @@ import com.example.mind_garden.data.local.entity.*
         GoalEntity::class,
         ChatMessageEntity::class,
         MotivationalContentEntity::class,
-        ResourceEntity::class
+        ResourceEntity::class,
+        SearchHistoryEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class MindGardenDatabase : RoomDatabase() {
@@ -26,4 +27,5 @@ abstract class MindGardenDatabase : RoomDatabase() {
     abstract fun chatMessageDao(): ChatMessageDao
     abstract fun motivationalContentDao(): MotivationalContentDao
     abstract fun resourceDao(): ResourceDao
+    abstract fun searchHistoryDao(): SearchHistoryDao
 }

@@ -32,6 +32,18 @@ fun CourseSearchScreen(onCourseClick: (Course) -> Unit) {
     var searchQuery by remember { mutableStateOf("") }
     var selectedDepartment by remember { mutableStateOf("All") }
     var selectedLevel by remember { mutableStateOf("All") }
+    var showSearchHistory by remember { mutableStateOf(false) }
+
+    // Mock search history
+    val mockSearchHistory = remember {
+        listOf(
+            SearchHistoryItem("data structures", "2 hours ago", "course"),
+            SearchHistoryItem("calculus", "1 day ago", "course"),
+            SearchHistoryItem("algorithms", "1 day ago", "course"),
+            SearchHistoryItem("computer science", "2 days ago", "course"),
+            SearchHistoryItem("programming", "3 days ago", "course")
+        )
+    }
 
     val departments = listOf("All", "Computer Science", "Mathematics", "Engineering", "Business", "Arts")
     val levels = listOf("All", "100", "200", "300", "400")
@@ -63,10 +75,13 @@ fun CourseSearchScreen(onCourseClick: (Course) -> Unit) {
         // Search Bar
         OutlinedTextField(
             value = searchQuery,
-            onValueChange = { searchQuery = it },
+            onValueChange = {
+                searchQuery = it
+                showSearchHistory = it.isEmpty()
+            },
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(bottom = 16.dp),
+                .padding(bottom = 8.dp),
             placeholder = { Text("Search by course name, code, or description...") },
             leadingIcon = {
                 Icon(
@@ -76,10 +91,20 @@ fun CourseSearchScreen(onCourseClick: (Course) -> Unit) {
             },
             trailingIcon = {
                 if (searchQuery.isNotEmpty()) {
-                    IconButton(onClick = { searchQuery = "" }) {
+                    IconButton(onClick = {
+                        searchQuery = ""
+                        showSearchHistory = true
+                    }) {
                         Icon(
                             imageVector = Icons.Default.Clear,
                             contentDescription = "Clear"
+                        )
+                    }
+                } else {
+                    IconButton(onClick = { showSearchHistory = !showSearchHistory }) {
+                        Icon(
+                            imageVector = Icons.Default.DateRange,
+                            contentDescription = "Search History"
                         )
                     }
                 }
@@ -87,6 +112,48 @@ fun CourseSearchScreen(onCourseClick: (Course) -> Unit) {
             shape = RoundedCornerShape(12.dp),
             singleLine = true
         )
+
+        // Search History
+        if (showSearchHistory && searchQuery.isEmpty()) {
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp),
+                shape = RoundedCornerShape(12.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant
+                )
+            ) {
+                Column(
+                    modifier = Modifier.padding(12.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "Recent Searches",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                        TextButton(onClick = { showSearchHistory = false }) {
+                            Text("Hide")
+                        }
+                    }
+
+                    mockSearchHistory.forEach { history ->
+                        SearchHistoryItemCard(
+                            history = history,
+                            onClick = {
+                                searchQuery = history.query
+                                showSearchHistory = false
+                            }
+                        )
+                    }
+                }
+            }
+        }
 
         // Filters
         Row(
@@ -422,3 +489,49 @@ val sampleCourses = listOf(
         difficulty = "Moderate"
     )
 )
+
+data class SearchHistoryItem(
+    val query: String,
+    val timeAgo: String,
+    val type: String
+)
+
+@Composable
+fun SearchHistoryItemCard(
+    history: SearchHistoryItem,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(
+            imageVector = Icons.Default.DateRange,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(20.dp)
+        )
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = history.query,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.Medium
+            )
+            Text(
+                text = "${history.timeAgo} • ${history.type}",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+        }
+        Icon(
+            imageVector = Icons.Default.ArrowForward,
+            contentDescription = "Search again",
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(18.dp)
+        )
+    }
+}

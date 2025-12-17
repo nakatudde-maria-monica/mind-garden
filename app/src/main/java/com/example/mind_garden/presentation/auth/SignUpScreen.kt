@@ -21,13 +21,19 @@ import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.mind_garden.data.firebase.AuthResult
+import com.example.mind_garden.data.firebase.FirebaseAuthService
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SignUpScreen(
     onSignUpSuccess: () -> Unit,
-    onNavigateToLogin: () -> Unit
+    onNavigateToLogin: () -> Unit,
+    authService: FirebaseAuthService = hiltViewModel<AuthViewModel>().authService
 ) {
+    val scope = rememberCoroutineScope()
     var fullName by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var studentId by remember { mutableStateOf("") }
@@ -282,9 +288,26 @@ fun SignUpScreen(
                         else -> {
                             errorMessage = null
                             isLoading = true
-                            // TODO: Implement actual sign up logic
-                            // For now, just simulate success
-                            onSignUpSuccess()
+
+                            // Firebase Sign Up
+                            scope.launch {
+                                val result = authService.signUp(
+                                    email = email,
+                                    password = password,
+                                    fullName = fullName,
+                                    username = email.substringBefore("@")
+                                )
+
+                                isLoading = false
+                                when (result) {
+                                    is AuthResult.Success -> {
+                                        onSignUpSuccess()
+                                    }
+                                    is AuthResult.Error -> {
+                                        errorMessage = result.message
+                                    }
+                                }
+                            }
                         }
                     }
                 },

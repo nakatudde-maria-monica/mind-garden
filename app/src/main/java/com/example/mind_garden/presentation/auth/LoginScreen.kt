@@ -20,12 +20,18 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.mind_garden.data.firebase.AuthResult
+import com.example.mind_garden.data.firebase.FirebaseAuthService
+import kotlinx.coroutines.launch
 
 @Composable
 fun LoginScreen(
     onLoginSuccess: () -> Unit,
-    onNavigateToSignUp: () -> Unit
+    onNavigateToSignUp: () -> Unit,
+    authService: FirebaseAuthService = hiltViewModel<AuthViewModel>().authService
 ) {
+    val scope = rememberCoroutineScope()
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordVisible by remember { mutableStateOf(false) }
@@ -186,9 +192,24 @@ fun LoginScreen(
                         else -> {
                             errorMessage = null
                             isLoading = true
-                            // TODO: Implement actual login logic
-                            // For now, just simulate success
-                            onLoginSuccess()
+
+                            // Firebase Login
+                            scope.launch {
+                                val result = authService.signIn(
+                                    email = email,
+                                    password = password
+                                )
+
+                                isLoading = false
+                                when (result) {
+                                    is AuthResult.Success -> {
+                                        onLoginSuccess()
+                                    }
+                                    is AuthResult.Error -> {
+                                        errorMessage = result.message
+                                    }
+                                }
+                            }
                         }
                     }
                 },

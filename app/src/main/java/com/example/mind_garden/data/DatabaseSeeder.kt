@@ -1,9 +1,11 @@
 package com.example.mind_garden.data
 
 import com.example.mind_garden.data.local.MindGardenDatabase
+import com.example.mind_garden.data.local.entity.ChatMessageEntity
 import com.example.mind_garden.data.local.entity.CourseEntity
 import com.example.mind_garden.data.local.entity.MotivationalContentEntity
 import com.example.mind_garden.data.local.entity.ResourceEntity
+import com.example.mind_garden.data.local.entity.SearchHistoryEntity
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -12,9 +14,157 @@ class DatabaseSeeder @Inject constructor(
     private val database: MindGardenDatabase
 ) {
     suspend fun seedDatabase() {
+        seedMockChatHistory()
+        seedMockSearchHistory()
         seedMotivationalContent()
         seedSampleCourses()
         seedResources()
+    }
+
+    private suspend fun seedMockSearchHistory() {
+        val searchDao = database.searchHistoryDao()
+
+        val now = System.currentTimeMillis()
+        val twoHoursAgo = now - (2 * 60 * 60 * 1000)
+        val oneDayAgo = now - (24 * 60 * 60 * 1000)
+        val twoDaysAgo = now - (2L * 24 * 60 * 60 * 1000)
+        val threeDaysAgo = now - (3L * 24 * 60 * 60 * 1000)
+        val oneWeekAgo = now - (7L * 24 * 60 * 60 * 1000)
+
+        val mockSearches = listOf(
+            SearchHistoryEntity(
+                userId = "default_user",
+                searchQuery = "data structures",
+                searchType = "course",
+                timestamp = twoHoursAgo,
+                resultCount = 5
+            ),
+            SearchHistoryEntity(
+                userId = "default_user",
+                searchQuery = "calculus",
+                searchType = "course",
+                timestamp = oneDayAgo,
+                resultCount = 3
+            ),
+            SearchHistoryEntity(
+                userId = "default_user",
+                searchQuery = "algorithms",
+                searchType = "course",
+                timestamp = oneDayAgo,
+                resultCount = 7
+            ),
+            SearchHistoryEntity(
+                userId = "default_user",
+                searchQuery = "time management",
+                searchType = "resource",
+                timestamp = twoDaysAgo,
+                resultCount = 12
+            ),
+            SearchHistoryEntity(
+                userId = "default_user",
+                searchQuery = "computer science",
+                searchType = "course",
+                timestamp = twoDaysAgo,
+                resultCount = 15
+            ),
+            SearchHistoryEntity(
+                userId = "default_user",
+                searchQuery = "study tips",
+                searchType = "resource",
+                timestamp = threeDaysAgo,
+                resultCount = 8
+            ),
+            SearchHistoryEntity(
+                userId = "default_user",
+                searchQuery = "programming",
+                searchType = "course",
+                timestamp = threeDaysAgo,
+                resultCount = 10
+            ),
+            SearchHistoryEntity(
+                userId = "default_user",
+                searchQuery = "exam preparation",
+                searchType = "resource",
+                timestamp = oneWeekAgo,
+                resultCount = 6
+            ),
+            SearchHistoryEntity(
+                userId = "default_user",
+                searchQuery = "mathematics",
+                searchType = "course",
+                timestamp = oneWeekAgo,
+                resultCount = 9
+            ),
+            SearchHistoryEntity(
+                userId = "default_user",
+                searchQuery = "stress management",
+                searchType = "resource",
+                timestamp = oneWeekAgo - (2 * 24 * 60 * 60 * 1000),
+                resultCount = 4
+            )
+        )
+
+        mockSearches.forEach { searchDao.insertSearch(it) }
+    }
+
+    private suspend fun seedMockChatHistory() {
+        val chatDao = database.chatMessageDao()
+
+        val now = System.currentTimeMillis()
+        val oneHourAgo = now - (60 * 60 * 1000)
+        val twoDaysAgo = now - (2L * 24 * 60 * 60 * 1000)
+        val threeDaysAgo = now - (3L * 24 * 60 * 60 * 1000)
+        val oneWeekAgo = now - (7L * 24 * 60 * 60 * 1000)
+
+        val mockChats = listOf(
+            // Recent AI conversations
+            ChatMessageEntity(
+                userId = "default_user",
+                message = "How do I prepare for my Data Structures exam?",
+                response = "Great question! Here are some effective strategies for preparing for your Data Structures exam:\n\n1. **Master the Basics**: Make sure you understand fundamental concepts like arrays, linked lists, stacks, queues, trees, and graphs.\n\n2. **Practice Implementation**: Don't just memorize - actually code these data structures from scratch.\n\n3. **Understand Time Complexity**: Know the Big O notation for different operations.\n\n4. **Solve Problems**: Practice on LeetCode or HackerRank.\n\n5. **Review Past Exams**: Look at previous papers to understand the format.\n\nWould you like specific practice problems?",
+                isUserMessage = false,
+                timestamp = oneHourAgo,
+                courseId = "cs201"
+            ),
+            ChatMessageEntity(
+                userId = "default_user",
+                message = "What are the best study techniques for Calculus?",
+                response = "Calculus requires both conceptual understanding and practice:\n\n1. **Understand Concepts First**: Don't just memorize formulas - understand WHY they work.\n\n2. **Practice Daily**: Spend at least 30 minutes solving problems.\n\n3. **Use Visual Aids**: Watch Khan Academy or 3Blue1Brown videos.\n\n4. **Form Study Groups**: Teaching peers helps solidify understanding.\n\n5. **Office Hours**: Visit professors with specific questions.\n\n6. **Past Papers**: Practice with previous exam questions.\n\nFocus on understanding rather than memorization!",
+                isUserMessage = false,
+                timestamp = twoDaysAgo,
+                courseId = "math101"
+            ),
+            ChatMessageEntity(
+                userId = "default_user",
+                message = "I'm feeling overwhelmed with my course load. Any tips?",
+                response = "I understand - feeling overwhelmed is very common. Here are strategies:\n\n**Time Management:**\n- Use Pomodoro Technique (25-min work + 5-min breaks)\n- Prioritize with Eisenhower Matrix\n- Create a weekly schedule\n\n**Self-Care:**\n- Get 7-8 hours of sleep\n- Take regular breaks\n- Practice deep breathing\n\n**Academic Support:**\n- Break tasks into smaller chunks\n- Use tutoring and counseling\n- Communicate with professors\n\nRemember: It's okay to ask for help. Progress over perfection!\n\nWould you like specific help with any course?",
+                isUserMessage = false,
+                timestamp = threeDaysAgo
+            ),
+            ChatMessageEntity(
+                userId = "default_user",
+                message = "What programming language should I focus on?",
+                response = "The best language depends on your goals:\n\n**For Beginners:**\n- **Python**: Great for fundamentals, data science, AI/ML\n- **JavaScript**: Essential for web development\n\n**For Careers:**\n- Web: JavaScript, TypeScript\n- Mobile: Kotlin (Android), Swift (iOS)\n- Data Science: Python, R\n- Game Dev: C++, C#\n- Systems: C, Rust\n\n**My Recommendation:** Start with **Python** - it has clean syntax, huge community, and wide applications.\n\nOnce you master one language, others become easier!\n\nWhat are you interested in building?",
+                isUserMessage = false,
+                timestamp = oneWeekAgo
+            ),
+            ChatMessageEntity(
+                userId = "default_user",
+                message = "How can I improve my time management?",
+                response = "Time management is crucial! Here's a comprehensive approach:\n\n**Planning:**\n- Use a planner or digital calendar\n- Plan your week every Sunday\n- Time-block for deep work\n\n**Prioritization:**\n- ABCDE method: A=Must do, B=Should do, C=Nice to do\n- Tackle hardest task first\n\n**Execution:**\n- Set specific session goals\n- Remove distractions\n- 2-minute rule: if it takes <2 min, do it now\n\n**Review:**\n- Weekly review of progress\n- Adjust based on actual time\n\nStart small - master one technique at a time!",
+                isUserMessage = false,
+                timestamp = oneWeekAgo - (2 * 24 * 60 * 60 * 1000)
+            ),
+            ChatMessageEntity(
+                userId = "default_user",
+                message = "How do I choose the right courses for next semester?",
+                response = "Great question! Here's a strategic approach:\n\n**Consider These Factors:**\n1. **Prerequisites**: Check what courses unlock future classes\n2. **Workload Balance**: Mix difficult courses with easier ones\n3. **Interest**: Take courses you're genuinely excited about\n4. **Career Goals**: Align with your intended career path\n5. **Professor Reviews**: Check RateMyProfessors\n\n**Practical Steps:**\n- Meet with your academic advisor\n- Read course syllabi from previous semesters\n- Talk to students who've taken the courses\n- Consider your other commitments (work, activities)\n\n**Pro Tip**: Don't overload! Quality > quantity. Better to excel in 4 courses than struggle in 6.\n\nNeed help with specific course combinations?",
+                isUserMessage = false,
+                timestamp = oneWeekAgo - (5 * 24 * 60 * 60 * 1000)
+            )
+        )
+
+        mockChats.forEach { chatDao.insertMessage(it) }
     }
 
     private suspend fun seedMotivationalContent() {
