@@ -15,8 +15,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -26,34 +24,29 @@ import kotlinx.coroutines.launch
 data class OnboardingPage(
     val title: String,
     val description: String,
-    val icon: ImageVector,
-    val gradient: List<Color>
+    val icon: ImageVector
 )
 
 val onboardingPages = listOf(
     OnboardingPage(
         title = "Welcome to MindGarden",
         description = "Your personal academic companion powered by AI. Get 24/7 support for your educational journey.",
-        icon = Icons.Default.Star,
-        gradient = listOf(Color(0xFF6B4CE6), Color(0xFF4E9BF5))
+        icon = Icons.Default.Star
     ),
     OnboardingPage(
         title = "AI-Powered Assistance",
         description = "Chat with our intelligent assistant for instant help with courses, study tips, and academic guidance.",
-        icon = Icons.Default.Favorite,
-        gradient = listOf(Color(0xFF9C27B0), Color(0xFFE91E63))
+        icon = Icons.Default.Favorite
     ),
     OnboardingPage(
         title = "Emotional Support",
         description = "Get motivational content, stress management tips, and support when facing academic challenges.",
-        icon = Icons.Default.FavoriteBorder,
-        gradient = listOf(Color(0xFFE91E63), Color(0xFFFF5722))
+        icon = Icons.Default.FavoriteBorder
     ),
     OnboardingPage(
         title = "Track Your Progress",
         description = "Monitor study sessions, set goals, and celebrate your achievements as you grow.",
-        icon = Icons.Default.DateRange,
-        gradient = listOf(Color(0xFF00BCD4), Color(0xFF009688))
+        icon = Icons.Default.DateRange
     )
 )
 
@@ -156,20 +149,18 @@ fun OnboardingPageContent(page: OnboardingPage) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        // Icon with gradient background
+        // Icon with theme background
         Box(
             modifier = Modifier
                 .size(160.dp)
                 .clip(CircleShape)
-                .background(
-                    Brush.linearGradient(page.gradient)
-                ),
+                .background(MaterialTheme.colorScheme.primary),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = page.icon,
                 contentDescription = null,
-                tint = Color.White,
+                tint = MaterialTheme.colorScheme.onPrimary,
                 modifier = Modifier.size(80.dp)
             )
         }
